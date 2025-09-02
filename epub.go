@@ -54,6 +54,7 @@ package epub
 
 import (
 	"archive/zip"
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -238,6 +239,64 @@ func Open(path string) (*Epub, error) {
 func New(r *zip.Reader) (*Epub, error) {
 	epub := &Epub{
 		File: r,
+	}
+
+	if err := epub.parseContainer(); err != nil {
+		return nil, err
+	}
+
+	if err := epub.parsePackage(); err != nil {
+		return nil, err
+	}
+
+	if err := epub.parseTOC(); err != nil {
+		return nil, err
+	}
+
+	return epub, nil
+}
+
+// NewReader creates and parses an EPUB from an io.Reader
+//
+// The NewReader function takes an io.Reader and returns a pointer to an
+// Epub struct that represents the parsed contents of the EPUB.
+// This is useful when you have an io.Reader and want to parse it as an EPUB file.
+// Note that this function reads the entire content into memory to provide random access.
+//
+// Example:
+//
+//	// When you have an io.Reader containing EPUB data
+//	reader, err := os.Open("book.epub")
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer reader.Close()
+//
+//	// Parse as EPUB
+//	e, err := epub.NewReader(reader)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer e.Close()
+func NewReader(r io.Reader) (*Epub, error) {
+	// Read all data into memory to provide random access
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a reader that implements ReaderAt
+	readerAt := bytes.NewReader(data)
+
+	// Create a zip reader
+	zipReader, err := zip.NewReader(readerAt, int64(len(data)))
+	if err != nil {
+		return nil, err
+	}
+
+	// Create epub
+	epub := &Epub{
+		File: zipReader,
 	}
 
 	if err := epub.parseContainer(); err != nil {
