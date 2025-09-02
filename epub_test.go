@@ -2,6 +2,7 @@ package epub
 
 import (
 	"io"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -172,5 +173,55 @@ func TestEpub_GetFileReader(t *testing.T) {
 	_, err = epub.GetFileReader("nonexistent.xml")
 	if err == nil {
 		t.Error("Expected error for invalid file path, got nil")
+	}
+}
+
+func TestNewReader(t *testing.T) {
+	// Open test EPUB file as regular file
+	file, err := os.Open(getTestEpubPath())
+	if err != nil {
+		t.Fatalf("Failed to open test EPUB file: %v", err)
+	}
+	defer file.Close()
+
+	// Parse EPUB using NewReader
+	epub, err := NewReader(file)
+	if err != nil {
+		t.Fatalf("Failed to parse EPUB with NewReader: %v", err)
+	}
+
+	if epub == nil {
+		t.Fatal("Expected EPUB object, got nil")
+	}
+
+	// Verify basic metadata
+	title := epub.GetTitle()
+	if title == "" {
+		t.Error("Expected title to be non-empty")
+	}
+
+	author := epub.GetAuthor()
+	if author == "" {
+		t.Error("Expected author to be non-empty")
+	}
+
+	// Verify we can get chapters
+	chapters, err := epub.GetChapters()
+	if err != nil {
+		t.Fatalf("Failed to get chapters: %v", err)
+	}
+
+	if len(chapters) == 0 {
+		t.Error("Expected to get at least one chapter")
+	}
+
+	// Verify we can get chapter content
+	content, err := epub.GetChapterContent(0)
+	if err != nil {
+		t.Fatalf("Failed to get chapter content: %v", err)
+	}
+
+	if content == "" {
+		t.Error("Expected chapter content to be non-empty")
 	}
 }
